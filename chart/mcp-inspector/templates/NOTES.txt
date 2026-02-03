@@ -1,0 +1,44 @@
+MCP Inspector has been deployed successfully!
+
+{{- if .Values.route.enabled }}
+
+OpenShift Route:
+{{- if .Values.route.host }}
+  URL: https://{{ .Values.route.host }}
+{{- else }}
+  Run: oc get route {{ include "mcp-inspector.fullname" . }} -o jsonpath='{.spec.host}'
+{{- end }}
+
+{{- else if .Values.ingress.enabled }}
+
+Ingress:
+{{- range $host := .Values.ingress.hosts }}
+  {{- range .paths }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ $host.host }}{{ .path }}
+  {{- end }}
+{{- end }}
+
+{{- else }}
+
+Access MCP Inspector using port-forward:
+
+  kubectl port-forward svc/{{ include "mcp-inspector.fullname" . }} {{ .Values.service.clientPort }}:{{ .Values.service.clientPort }}
+
+Then open: http://localhost:{{ .Values.service.clientPort }}
+
+{{- end }}
+
+Configuration:
+  - Client Port: {{ .Values.config.clientPort }}
+  - Server/Proxy Port: {{ .Values.config.serverPort }}
+  - Authentication: {{ if .Values.config.omitAuth }}Disabled{{ else }}Enabled{{ end }}
+
+{{- if not .Values.config.omitAuth }}
+
+Note: Authentication is enabled. You'll need to retrieve the session token from the pod logs:
+
+  kubectl logs deployment/{{ include "mcp-inspector.fullname" . }} | grep "Session token"
+
+{{- end }}
+
+For more information, visit: https://github.com/modelcontextprotocol/inspector

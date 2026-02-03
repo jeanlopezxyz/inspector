@@ -1,0 +1,127 @@
+# MCP Inspector Helm Chart Values
+
+replicaCount: 1
+
+image:
+  repository: ghcr.io/jeanlopezxyz/inspector
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# MCP Inspector Configuration
+config:
+  # Host to bind the servers (use 0.0.0.0 for container deployments)
+  host: "0.0.0.0"
+  # Client port (web UI)
+  clientPort: 6274
+  # Server/Proxy port (MCP proxy)
+  serverPort: 6277
+  # Disable authentication (required for OpenShift routes without token handling)
+  omitAuth: true
+  # Disable auto-opening browser
+  autoOpenEnabled: false
+  # Session token (auto-generated if not set)
+  sessionToken: ""
+  # Configuration file path (optional)
+  configFile: ""
+
+# Environment variables (additional)
+extraEnv: []
+#  - name: MY_VAR
+#    value: "my-value"
+
+serviceAccount:
+  create: true
+  automount: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  clientPort: 6274
+  serverPort: 6277
+
+# Ingress configuration (for Kubernetes)
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # kubernetes.io/tls-acme: "true"
+  hosts:
+    - host: mcp-inspector.local
+      paths:
+        - path: /
+          pathType: Prefix
+          port: 6274
+  tls: []
+  #  - secretName: mcp-inspector-tls
+  #    hosts:
+  #      - mcp-inspector.local
+
+# OpenShift Route configuration
+route:
+  enabled: true
+  annotations: {}
+  host: ""  # Auto-generated if empty
+  tls:
+    enabled: true
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  # Create route for proxy server (optional)
+  proxy:
+    enabled: false
+    host: ""
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# Liveness and readiness probes
+livenessProbe:
+  httpGet:
+    path: /
+    port: client
+  initialDelaySeconds: 10
+  periodSeconds: 10
+
+readinessProbe:
+  httpGet:
+    path: /
+    port: client
+  initialDelaySeconds: 5
+  periodSeconds: 5
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+  # targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}

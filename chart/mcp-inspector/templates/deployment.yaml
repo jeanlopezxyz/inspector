@@ -1,0 +1,89 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "mcp-inspector.fullname" . }}
+  labels:
+    {{- include "mcp-inspector.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "mcp-inspector.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "mcp-inspector.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "mcp-inspector.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: {{ include "mcp-inspector.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: HOST
+              value: {{ .Values.config.host | quote }}
+            - name: CLIENT_PORT
+              value: {{ .Values.config.clientPort | quote }}
+            - name: SERVER_PORT
+              value: {{ .Values.config.serverPort | quote }}
+            {{- if .Values.config.omitAuth }}
+            - name: DANGEROUSLY_OMIT_AUTH
+              value: "true"
+            {{- end }}
+            {{- if not .Values.config.autoOpenEnabled }}
+            - name: MCP_AUTO_OPEN_ENABLED
+              value: "false"
+            {{- end }}
+            {{- if .Values.config.sessionToken }}
+            - name: MCP_PROXY_AUTH_TOKEN
+              value: {{ .Values.config.sessionToken | quote }}
+            {{- end }}
+            {{- if .Values.config.configFile }}
+            - name: MCP_CONFIG_FILE
+              value: {{ .Values.config.configFile | quote }}
+            {{- end }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          ports:
+            - name: client
+              containerPort: {{ .Values.config.clientPort }}
+              protocol: TCP
+            - name: server
+              containerPort: {{ .Values.config.serverPort }}
+              protocol: TCP
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
